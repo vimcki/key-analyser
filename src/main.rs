@@ -86,15 +86,85 @@ fn calculate_histogram(
     keycodes: HashMap<String, String>,
 ) -> Result<HashMap<String, u32>> {
     let mut histogram = HashMap::new();
+    let modifiers = vec![
+        "Shift_L",
+        "Shift_R",
+        "Control_L",
+        "Control_R",
+        "Alt_L",
+        "Alt_R",
+    ];
 
     for path in paths {
+        let mut pressed: HashMap<String, bool> = modifiers
+            .iter()
+            .map(|key| (key.to_string(), false))
+            .collect();
+
         let data = std::fs::read_to_string(&path)
             .with_context(|| format!("Could not read file `{}`", path.display()))?;
-        for keycode in data.split("\n") {
-            let letter = match keycodes.get(keycode) {
-                Some(letter) => letter,
+        for line in data.split("\n") {
+            let split = line.split_whitespace().collect::<Vec<&str>>();
+            if split.len() != 2 {
+                continue;
+            }
+            let keycode = split[0];
+            let action = split[1];
+            let modifier = &keycodes[keycode];
+            if modifiers.iter().any(|key| key == &modifier) {
+                match action {
+                    "(KeyPress)" => pressed.insert(modifier.clone(), true),
+                    "(KeyRelease)" => pressed.insert(modifier.clone(), false),
+                    _ => return Err(anyhow::anyhow!("Unknown action `{}`", action)),
+                };
+            }
+
+            let mut letter: String = match keycodes.get(keycode) {
+                Some(letter) => letter.clone(),
                 None => continue,
             };
+
+            if pressed["Shift_L"] || pressed["Shift_R"] {
+                letter = match letter.as_str() {
+                    "1" => String::from("!"),
+                    "2" => String::from("@"),
+                    "3" => String::from("#"),
+                    "4" => String::from("$"),
+                    "5" => String::from("%"),
+                    "6" => String::from("^"),
+                    "7" => String::from("&"),
+                    "8" => String::from("*"),
+                    "9" => String::from("("),
+                    "0" => String::from(")"),
+                    "minus" => String::from("_"),
+                    "equal" => String::from("+"),
+                    "bracketright" => String::from("{"),
+                    "bracketleft" => String::from("}"),
+                    "semicolon" => String::from(":"),
+                    "apostrophe" => String::from("\""),
+                    "backslash" => String::from("|"),
+                    "comma" => String::from("<"),
+                    "period" => String::from(">"),
+                    "slash" => String::from("?"),
+                    "grave" => String::from("~"),
+                    _ => letter,
+                };
+            } else {
+                letter = match letter.as_str() {
+                    "minus" => String::from("-"),
+                    "equal" => String::from("="),
+                    "bracketright" => String::from("]"),
+                    "bracketleft" => String::from("["),
+                    "semicolon" => String::from(";"),
+                    "apostrophe" => String::from("'"),
+                    "backslash" => String::from("\\"),
+                    "comma" => String::from(","),
+                    "period" => String::from("."),
+                    "slash" => String::from("/"),
+                    "grave" => String::from("`"),
+                    _ => letter,
+                }
+            }
 
             let count = histogram.entry(letter.clone()).or_insert(0 as u32);
             *count += 1;
