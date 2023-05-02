@@ -2,7 +2,7 @@
 
 This is histogram generator for keypress data gathered with:
 ```
-xinput test-xi2 --root | grep --line-buffered -A 3 -E '\(KeyPress\)' | grep --line-buffered detail | awk '{print $2;fflush()}'
+xinput test-xi2 --root | grep --line-buffered -A 2 -E '\(KeyPress\)|\(KeyRelease\)' | awk 'BEGIN{RS="--"}NF>1{print $9, $4}'
 ```
 
 it calls `xmodmap -pke` underneath to get keycode -> text representation
